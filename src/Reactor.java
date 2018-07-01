@@ -97,7 +97,7 @@ public class Reactor implements Runnable {
 
         @Override
         public void run() {
-            if (state == READING)
+            if (state == READING){};
 
         }
 
