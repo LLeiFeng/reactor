@@ -7,6 +7,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * @program: Reactor
@@ -75,6 +76,9 @@ public class Reactor implements Runnable {
 
     final class Handler implements Runnable {
 
+
+        static  ThreadPoolExecutor pool = new ThreadPoolExecutor();
+        static  final int PROCESSING = 3;
         final SocketChannel socket;
         final SelectionKey sk;
         ByteBuffer input = ByteBuffer.allocate(1024);
@@ -101,18 +105,31 @@ public class Reactor implements Runnable {
 
         }
 
-        void  read() throws IOException {
+       synchronized void  read() throws IOException {
             socket.read(input);
             if(inputIsComplete()){
                 process();
-                state = SENDING;
-                sk.interestOps(SelectionKey.OP_WRITE);
+                state = PROCESSING;
+                pool.execute(new Processer()ß);
             }
         }
 
         void send() throws IOException {
             socket.write(output);
             if(outputIsComplete()) sk.cancel();
+        }
+
+        synchronized void processAndHandOff(){
+            process();
+            state = SENDING;
+            sk.interestOps(SelectionKey.OP_WRITE);
+        }
+
+        class Processer implements  Runnable {
+            @Override
+            public void run() {
+                processAndHandOff();
+            }
         }
     }
 }
